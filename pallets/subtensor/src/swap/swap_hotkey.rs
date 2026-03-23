@@ -561,7 +561,11 @@ impl<T: Config> Pallet<T> {
             weight.saturating_accrue(T::DbWeight::get().reads(old_alpha_values_v2.len() as u64));
             weight.saturating_accrue(T::DbWeight::get().writes(old_alpha_values_v2.len() as u64));
 
-            // 9.1. Transfer root claimable
+            // 9.1. Transfer root claimable for this subnet only.
+            // NOTE: We must NOT transfer the entire RootClaimable map here because this
+            // function may be swapping on a single non-root subnet. Wiping all claimable
+            // rates from the old hotkey would freeze root dividends on every other subnet
+            // where the old hotkey still has root stake and RootClaimed watermarks.
             Self::transfer_root_claimable_for_new_hotkey(old_hotkey, new_hotkey, netuid);
 
             // 9.2. Insert the new alpha values.
