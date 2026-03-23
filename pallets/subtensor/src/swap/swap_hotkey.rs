@@ -567,6 +567,7 @@ impl<T: Config> Pallet<T> {
             // rates from the old hotkey would freeze root dividends on every other subnet
             // where the old hotkey still has root stake and RootClaimed watermarks.
             Self::transfer_root_claimable_for_new_hotkey(old_hotkey, new_hotkey, netuid);
+            weight.saturating_accrue(T::DbWeight::get().reads_writes(2, 2));
 
             // 9.2. Insert the new alpha values.
             for ((coldkey, netuid_alpha), alpha) in old_alpha_values {
