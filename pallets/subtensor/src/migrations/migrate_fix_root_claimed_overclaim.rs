@@ -40,7 +40,7 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
     let mut total_count: u64 = 0;
 
     for ((netuid, hotkey, coldkey), claimed) in RootClaimed::<T>::iter() {
-        total_count += 1;
+        total_count = total_count.saturating_add(1);
         weight.saturating_accrue(T::DbWeight::get().reads(1));
 
         if claimed == 0u128 {
@@ -69,7 +69,7 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
         if claimed > claimable {
             RootClaimed::<T>::insert((&netuid, &hotkey, &coldkey), claimable);
             weight.saturating_accrue(T::DbWeight::get().writes(1));
-            fixed_count += 1;
+            fixed_count = fixed_count.saturating_add(1);
         }
     }
 
