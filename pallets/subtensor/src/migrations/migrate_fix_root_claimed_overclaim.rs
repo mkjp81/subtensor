@@ -1,5 +1,6 @@
 use super::*;
 use frame_support::pallet_prelude::Weight;
+use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::prelude::string::String;
 use sp_std::collections::btree_map::BTreeMap;
 use substrate_fixed::types::I96F32;
@@ -37,30 +38,38 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
         String::from_utf8_lossy(&migration_name)
     );
 
-    let restore_data = build_restore_data::<T>();
     let mut restored_count: u64 = 0;
+    // Only run on mainnet.
+    // Mainnet genesis: 0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03
+    let genesis_hash = frame_system::Pallet::<T>::block_hash(BlockNumberFor::<T>::zero());
+    let genesis_bytes = genesis_hash.as_ref();
+    let mainnet_genesis =
+        hex_literal::hex!("2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03");
+    if genesis_bytes == mainnet_genesis {
+        let restore_data = build_restore_data::<T>();
 
-    for (hotkey, rates_to_restore) in restore_data {
-        if rates_to_restore.is_empty() {
-            continue;
-        }
-
-        RootClaimable::<T>::mutate(&hotkey, |claimable_map| {
-            for (netuid, snapshot_rate) in rates_to_restore.iter() {
-                claimable_map
-                    .entry(*netuid)
-                    .and_modify(|current| *current = current.saturating_add(*snapshot_rate))
-                    .or_insert(*snapshot_rate);
-                restored_count = restored_count.saturating_add(1);
+        for (hotkey, rates_to_restore) in restore_data {
+            if rates_to_restore.is_empty() {
+                continue;
             }
-        });
-        weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
 
-        log::info!(
-            "Restored {} RootClaimable entries for hotkey={:?}",
-            rates_to_restore.len(),
-            hotkey,
-        );
+            RootClaimable::<T>::mutate(&hotkey, |claimable_map| {
+                for (netuid, snapshot_rate) in rates_to_restore.iter() {
+                    claimable_map
+                        .entry(*netuid)
+                        .and_modify(|current| *current = current.saturating_add(*snapshot_rate))
+                        .or_insert(*snapshot_rate);
+                    restored_count = restored_count.saturating_add(1);
+                }
+            });
+            weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+
+            log::info!(
+                "Restored {} RootClaimable entries for hotkey={:?}",
+                rates_to_restore.len(),
+                hotkey,
+            );
+        }
     }
 
     // Mark migration as completed
