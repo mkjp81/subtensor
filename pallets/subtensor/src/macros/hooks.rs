@@ -166,7 +166,10 @@ mod hooks {
                 // Fix staking hot keys
                 .saturating_add(migrations::migrate_fix_staking_hot_keys::migrate_fix_staking_hot_keys::<T>())
                 // Migrate coldkey swap scheduled to announcements
-                .saturating_add(migrations::migrate_coldkey_swap_scheduled_to_announcements::migrate_coldkey_swap_scheduled_to_announcements::<T>());
+                .saturating_add(migrations::migrate_coldkey_swap_scheduled_to_announcements::migrate_coldkey_swap_scheduled_to_announcements::<T>())
+                // Remove orphaned axon/prometheus/certificate entries (follow-up to v1,
+                // accumulated while serve_axon checked registration on any network)
+                .saturating_add(migrations::migrate_remove_orphan_axon_prom_cert_v2::migrate_remove_orphan_axon_prom_cert_v2::<T>());
             weight
         }
 
