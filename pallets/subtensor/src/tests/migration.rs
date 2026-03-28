@@ -3179,7 +3179,7 @@ fn test_migrate_remove_orphan_axon_prom_cert_v2() {
             assert!(NeuronCertificates::<Test>::contains_key(netuid, hk));
             assert!(Prometheus::<Test>::contains_key(netuid, hk));
         }
-        for i in uids.saturating_add(1)..=items {
+        for i in (uids + 1)..=items {
             let hk = U256::from(netuid.inner() as u32 * 1000 + i);
             assert!(!Axons::<Test>::contains_key(netuid, hk));
             assert!(!NeuronCertificates::<Test>::contains_key(netuid, hk));
