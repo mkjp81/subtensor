@@ -3130,7 +3130,7 @@ fn test_migrate_remove_orphan_axon_prom_cert_v2() {
 
     new_test_ext(1).execute_with(|| {
         setup_for(NetUid::from(10), 4, 7);
-        setup_for(NetUid::from(20), 8, 8);
+        setup_for(NetUid::from(20), 8, 10);
         assert!(!HasMigrationRun::<Test>::get(MIGRATION_NAME));
 
         let w = migrate_remove_orphan_axon_prom_cert_v2::<Test>();
@@ -3139,7 +3139,7 @@ fn test_migrate_remove_orphan_axon_prom_cert_v2() {
         assert!(HasMigrationRun::<Test>::get(MIGRATION_NAME));
         // Only uids entries remain; extra orphan entries (uid+1..items) are gone.
         assert_for(NetUid::from(10), 4, 7);
-        assert_for(NetUid::from(20), 8, 8);
+        assert_for(NetUid::from(20), 8, 10);
 
         // Running again is a no-op (returns early).
         let w2 = migrate_remove_orphan_axon_prom_cert_v2::<Test>();
