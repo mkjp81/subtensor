@@ -256,7 +256,8 @@ where
                         *protocol,
                         *placeholder1,
                         *placeholder2,
-                    ),
+                    )
+                    .map(|_| ()),
                     0u64,
                 )
                 .map(|validity| (validity, (), origin.clone()))
