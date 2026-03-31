@@ -2685,7 +2685,7 @@ fn test_swap_hotkey_root_claims_changed_if_root() {
 
         assert!(claimable > 0);
 
-        let claimed = RootClaimed::<Test>::get((netuid_1, &neuron_hotkey, &staker_coldkey,));
+        let claimed = RootClaimed::<Test>::get((netuid_1, &neuron_hotkey, &staker_coldkey));
         assert!(claimed > 0u128);
 
         step_block(20);
@@ -2704,7 +2704,10 @@ fn test_swap_hotkey_root_claims_changed_if_root() {
                 .expect("claimable must exist at this point"),
             claimable
         );
-        assert_eq!(RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)), claimed);
+        assert_eq!(
+            RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)),
+            claimed
+        );
     });
 }
 
@@ -2776,7 +2779,7 @@ fn test_swap_hotkey_root_claims_changed_if_all_subnets() {
 
         assert!(claimable > 0);
 
-        let claimed = RootClaimed::<Test>::get((netuid_1, &neuron_hotkey, &staker_coldkey,));
+        let claimed = RootClaimed::<Test>::get((netuid_1, &neuron_hotkey, &staker_coldkey));
         assert!(claimed > 0u128);
 
         step_block(20);
@@ -2795,6 +2798,9 @@ fn test_swap_hotkey_root_claims_changed_if_all_subnets() {
                 .expect("claimable must exist at this point"),
             claimable
         );
-        assert_eq!(RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)), claimed);
+        assert_eq!(
+            RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)),
+            claimed
+        );
     });
 }

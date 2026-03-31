@@ -2,6 +2,16 @@ use super::*;
 use frame_support::pallet_prelude::Weight;
 use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::prelude::string::String;
+use share_pool::SafeFloat;
+use sp_core::crypto::Ss58Codec;
+use sp_runtime::AccountId32;
+use substrate_fixed::types::U64F64;
+
+pub fn decode_account_id32<T: Config>(ss58_string: &str) -> Option<T::AccountId> {
+    let account_id32: AccountId32 = AccountId32::from_ss58check(ss58_string).ok()?;
+    let mut account_id32_slice: &[u8] = account_id32.as_ref();
+    T::AccountId::decode(&mut account_id32_slice).ok()
+}
 
 /// Fixes the consequences of a bug in `perform_hotkey_swap_on_one_subnet` where
 /// `transfer_root_claimable_for_new_hotkey` unconditionally transferred the **entire**
@@ -15,10 +25,7 @@ use scale_info::prelude::string::String;
 /// Resulting in `owed = claimable_rate * root_stake - root_claimed = 0 - positive = negative → 0`,
 /// effectively freezing root dividends for the old hotkey.
 ///
-/// Remediation: restore the pre-swap `RootClaimable` rates (from chain history snapshots)
-/// back to the affected old_hotkeys, excluding subnets that were legitimately swapped.
-/// This adds the snapshot rates to whatever has re-accumulated since the bug, making
-/// `owed = (restored_rate + new_increments) * stake - claimed ≈ new_increments * stake > 0`.
+/// Remediation: restore the pre-swap `RootClaimable` and `RootClaimed` storage maps
 pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
     let migration_name = b"migrate_fix_root_claimed_overclaim".to_vec();
     let mut weight = T::DbWeight::get().reads(1);
@@ -43,7 +50,54 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
     let mainnet_genesis =
         hex_literal::hex!("2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03");
     if genesis_bytes == mainnet_genesis {
-        // TODO
+        let old_hotkey_ss58 = "5GmvyePN9aYErXBBhBnxZKGoGk4LKZApE4NkaSzW62CYCYNA";
+        let new_hotkey_ss58 = "5H6BqkzjYvViiqp7rQLXjpnaEmW7U9CoKxXhQ4efMqtX1mQw";
+
+        if let (Some(old_hotkey), Some(new_hotkey)) = (
+            decode_account_id32::<T>(old_hotkey_ss58),
+            decode_account_id32::<T>(new_hotkey_ss58),
+        ) {
+            let netuid = NetUid::from(27);
+
+            // Reverting the Root Claimable because it only should happen for root subnet
+            Pallet::<T>::transfer_root_claimable_for_new_hotkey(&new_hotkey, &old_hotkey);
+
+            let old_alpha_values: Vec<((T::AccountId, NetUid), U64F64)> =
+                Alpha::<T>::iter_prefix((&new_hotkey,)).collect();
+            weight.saturating_accrue(T::DbWeight::get().reads(old_alpha_values.len() as u64));
+
+            let old_alpha_values_v2: Vec<((T::AccountId, NetUid), SafeFloat)> =
+                AlphaV2::<T>::iter_prefix((&new_hotkey,)).collect();
+            weight.saturating_accrue(T::DbWeight::get().reads(old_alpha_values_v2.len() as u64));
+
+            // Reverting back root claimable
+            for ((coldkey, netuid_alpha), alpha) in old_alpha_values {
+                if netuid == netuid_alpha && alpha != 0 {
+                    Pallet::<T>::transfer_root_claimed_for_new_keys(
+                        netuid,
+                        &new_hotkey,
+                        &old_hotkey,
+                        &coldkey,
+                        &coldkey,
+                    );
+                }
+            }
+
+            // Reverting back root claimable
+            for ((coldkey, netuid_alpha), alpha) in old_alpha_values_v2 {
+                if netuid == netuid_alpha && !alpha.is_zero() {
+                    Pallet::<T>::transfer_root_claimed_for_new_keys(
+                        netuid,
+                        &new_hotkey,
+                        &old_hotkey,
+                        &coldkey,
+                        &coldkey,
+                    );
+                }
+            }
+        } else {
+            log::error!("Failed to decode hotkeys, skipping");
+        }
     }
 
     // Mark migration as completed
