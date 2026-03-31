@@ -625,9 +625,10 @@ impl<T: Config> Pallet<T> {
                     .collect();
 
                 for subnet in subnets {
-                    let claimed_coldkeys: Vec<T::AccountId> = RootClaimed::<T>::iter_prefix((subnet, old_hotkey))
-                        .map(|(coldkey, _)| coldkey)
-                        .collect();
+                    let claimed_coldkeys: Vec<T::AccountId> =
+                        RootClaimed::<T>::iter_prefix((subnet, old_hotkey))
+                            .map(|(coldkey, _)| coldkey)
+                            .collect();
 
                     for coldkey in claimed_coldkeys {
                         Self::transfer_root_claimed_for_new_keys(
