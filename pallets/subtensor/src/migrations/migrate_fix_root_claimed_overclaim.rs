@@ -51,9 +51,7 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
     weight.saturating_accrue(T::DbWeight::get().writes(1));
 
     log::info!(
-        "Migration 'migrate_fix_root_claimed_overclaim' completed. \
-        Restored {} RootClaimable entries.",
-        restored_count,
+        "Migration 'migrate_fix_root_claimed_overclaim' completed."
     );
 
     weight
