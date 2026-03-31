@@ -370,26 +370,22 @@ impl<T: Config> Pallet<T> {
             *new_root_claimed = old_root_claimed.saturating_add(*new_root_claimed);
         });
     }
-
-    /// Transfer only a single subnet's RootClaimable rate from old_hotkey to new_hotkey.
-    /// Used during single-subnet hotkey swaps to avoid wiping claimable rates for
-    /// subnets that are not being swapped.
     pub fn transfer_root_claimable_for_new_hotkey(
         old_hotkey: &T::AccountId,
         new_hotkey: &T::AccountId,
-        netuid: NetUid,
     ) {
-        // Remove the rate for this specific subnet from the old hotkey's map.
-        let rate = RootClaimable::<T>::mutate(old_hotkey, |claimable| claimable.remove(&netuid));
+        let src_root_claimable = RootClaimable::<T>::get(old_hotkey);
+        let mut dst_root_claimable = RootClaimable::<T>::get(new_hotkey);
+        RootClaimable::<T>::remove(old_hotkey);
 
-        // If the old hotkey had a rate for this subnet, add it to the new hotkey's map.
-        if let Some(claimable_rate) = rate {
-            RootClaimable::<T>::mutate(new_hotkey, |dst| {
-                dst.entry(netuid)
-                    .and_modify(|total| *total = total.saturating_add(claimable_rate))
-                    .or_insert(claimable_rate);
-            });
+        for (netuid, claimable_rate) in src_root_claimable.into_iter() {
+            dst_root_claimable
+                .entry(netuid)
+                .and_modify(|total| *total = total.saturating_add(claimable_rate))
+                .or_insert(claimable_rate);
         }
+
+        RootClaimable::<T>::insert(new_hotkey, dst_root_claimable);
     }
 
     /// Claim all root dividends for subnet and remove all associated data.

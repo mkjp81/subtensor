@@ -561,21 +561,9 @@ impl<T: Config> Pallet<T> {
             weight.saturating_accrue(T::DbWeight::get().reads(old_alpha_values_v2.len() as u64));
             weight.saturating_accrue(T::DbWeight::get().writes(old_alpha_values_v2.len() as u64));
 
-            // 9.1. Transfer root claimable for this subnet only.
-            // NOTE: We must NOT transfer the entire RootClaimable map here because this
-            // function may be swapping on a single non-root subnet. Wiping all claimable
-            // rates from the old hotkey would freeze root dividends on every other subnet
-            // where the old hotkey still has root stake and RootClaimed watermarks.
-            Self::transfer_root_claimable_for_new_hotkey(old_hotkey, new_hotkey, netuid);
-            weight.saturating_accrue(T::DbWeight::get().reads_writes(2, 2));
-
             // 9.2. Insert the new alpha values.
             for ((coldkey, netuid_alpha), alpha) in old_alpha_values {
                 if netuid == netuid_alpha {
-                    Self::transfer_root_claimed_for_new_keys(
-                        netuid, old_hotkey, new_hotkey, &coldkey, &coldkey,
-                    );
-
                     let new_alpha = Alpha::<T>::take((new_hotkey, &coldkey, netuid));
                     Alpha::<T>::remove((old_hotkey, &coldkey, netuid));
 
@@ -601,10 +589,6 @@ impl<T: Config> Pallet<T> {
 
             for ((coldkey, netuid_alpha), alpha) in old_alpha_values_v2 {
                 if netuid == netuid_alpha {
-                    Self::transfer_root_claimed_for_new_keys(
-                        netuid, old_hotkey, new_hotkey, &coldkey, &coldkey,
-                    );
-
                     let new_alpha_v2 = AlphaV2::<T>::take((new_hotkey, &coldkey, netuid));
                     AlphaV2::<T>::remove((old_hotkey, &coldkey, netuid));
                     AlphaV2::<T>::insert(
@@ -622,6 +606,33 @@ impl<T: Config> Pallet<T> {
                         staking_hotkeys.push(new_hotkey.clone());
                         StakingHotkeys::<T>::insert(&coldkey, staking_hotkeys);
                         weight.saturating_accrue(T::DbWeight::get().writes(1));
+                    }
+                }
+            }
+
+            // 9.3. Transfer root claimable and root claimed only for the root subnet
+            // NOTE: we shouldn't transfer root claimable and root claimed for other subnets,
+            // otherwise root stakers won't be able to receive dividends.
+            if netuid == NetUid::ROOT {
+                Self::transfer_root_claimable_for_new_hotkey(old_hotkey, new_hotkey);
+                weight.saturating_accrue(T::DbWeight::get().reads_writes(2, 2));
+
+                // After transfer, new_hotkey has the full RootClaimable map.
+                // We use it to know which subnets have outstanding claims.
+                let subnets: Vec<NetUid> = RootClaimable::<T>::get(new_hotkey)
+                    .keys()
+                    .copied()
+                    .collect();
+
+                for subnet in subnets {
+                    let claimed_coldkeys: Vec<T::AccountId> = RootClaimed::<T>::iter_prefix((subnet, old_hotkey))
+                        .map(|(coldkey, _)| coldkey)
+                        .collect();
+
+                    for coldkey in claimed_coldkeys {
+                        Self::transfer_root_claimed_for_new_keys(
+                            subnet, old_hotkey, new_hotkey, &coldkey, &coldkey,
+                        );
                     }
                 }
             }
