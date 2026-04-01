@@ -2594,9 +2594,12 @@ fn test_swap_hotkey_root_claims_unchanged_if_not_root() {
             BTreeSet::from([netuid])
         ));
 
-        let claimable = *RootClaimable::<Test>::get(neuron_hotkey)
+        let claimable = RootClaimable::<Test>::get(neuron_hotkey)
             .get(&netuid)
-            .expect("claimable must exist at this point");
+            .copied();
+
+        assert!(claimable.is_some());
+        let claimable = claimable.unwrap_or_default();
 
         assert!(claimable > 0);
 
@@ -2613,10 +2616,10 @@ fn test_swap_hotkey_root_claims_unchanged_if_not_root() {
 
         // Claimable and claimed should stay on old hotkey
         assert_eq!(
-            *RootClaimable::<Test>::get(neuron_hotkey)
+            RootClaimable::<Test>::get(neuron_hotkey)
                 .get(&netuid)
-                .expect("claimable must exist at this point"),
-            claimable
+                .copied(),
+            Some(claimable)
         );
         assert!(RootClaimed::<Test>::get((netuid, &neuron_hotkey, &staker_coldkey,)) > 0u128);
     });
@@ -2679,9 +2682,11 @@ fn test_swap_hotkey_root_claims_changed_if_root() {
             BTreeSet::from([netuid_1])
         ));
 
-        let claimable = *RootClaimable::<Test>::get(neuron_hotkey)
+        let claimable = RootClaimable::<Test>::get(neuron_hotkey)
             .get(&netuid_1)
-            .expect("claimable must exist at this point");
+            .copied();
+        assert!(claimable.is_some());
+        let claimable = claimable.unwrap_or_default();
 
         assert!(claimable > 0);
 
@@ -2699,10 +2704,10 @@ fn test_swap_hotkey_root_claims_changed_if_root() {
 
         // Claimable and claimed should be transferred to new hotkey
         assert_eq!(
-            *RootClaimable::<Test>::get(neuron_hotkey_new)
+            RootClaimable::<Test>::get(neuron_hotkey_new)
                 .get(&netuid_1)
-                .expect("claimable must exist at this point"),
-            claimable
+                .copied(),
+            Some(claimable)
         );
         assert_eq!(
             RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)),
@@ -2773,9 +2778,11 @@ fn test_swap_hotkey_root_claims_changed_if_all_subnets() {
             BTreeSet::from([netuid_1])
         ));
 
-        let claimable = *RootClaimable::<Test>::get(neuron_hotkey)
+        let claimable = RootClaimable::<Test>::get(neuron_hotkey)
             .get(&netuid_1)
-            .expect("claimable must exist at this point");
+            .copied();
+        assert!(claimable.is_some());
+        let claimable = claimable.unwrap_or_default();
 
         assert!(claimable > 0);
 
@@ -2793,10 +2800,10 @@ fn test_swap_hotkey_root_claims_changed_if_all_subnets() {
 
         // Claimable and claimed should be transferred to new hotkey
         assert_eq!(
-            *RootClaimable::<Test>::get(neuron_hotkey_new)
+            RootClaimable::<Test>::get(neuron_hotkey_new)
                 .get(&netuid_1)
-                .expect("claimable must exist at this point"),
-            claimable
+                .copied(),
+            Some(claimable)
         );
         assert_eq!(
             RootClaimed::<Test>::get((netuid_1, &neuron_hotkey_new, &staker_coldkey,)),
