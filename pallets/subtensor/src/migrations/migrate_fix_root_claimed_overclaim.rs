@@ -70,7 +70,7 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
                 AlphaV2::<T>::iter_prefix((&new_hotkey,)).collect();
             weight.saturating_accrue(T::DbWeight::get().reads(old_alpha_values_v2.len() as u64));
 
-            // Reverting back root claimable
+            // Reverting back root claimed
             for ((coldkey, netuid_alpha), alpha) in old_alpha_values {
                 if netuid == netuid_alpha && alpha != 0 {
                     Pallet::<T>::transfer_root_claimed_for_new_keys(
@@ -85,7 +85,7 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
                 }
             }
 
-            // Reverting back root claimable
+            // Reverting back root claimed
             for ((coldkey, netuid_alpha), alpha) in old_alpha_values_v2 {
                 if netuid == netuid_alpha && !alpha.is_zero() {
                     Pallet::<T>::transfer_root_claimed_for_new_keys(
