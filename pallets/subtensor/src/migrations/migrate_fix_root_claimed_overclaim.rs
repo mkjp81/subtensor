@@ -52,15 +52,15 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
     if genesis_bytes == mainnet_genesis {
         let old_hotkey_ss58 = "5GmvyePN9aYErXBBhBnxZKGoGk4LKZApE4NkaSzW62CYCYNA";
         let new_hotkey_ss58 = "5H6BqkzjYvViiqp7rQLXjpnaEmW7U9CoKxXhQ4efMqtX1mQw";
+        let netuid = NetUid::from(27);
 
         if let (Some(old_hotkey), Some(new_hotkey)) = (
             decode_account_id32::<T>(old_hotkey_ss58),
             decode_account_id32::<T>(new_hotkey_ss58),
         ) {
-            let netuid = NetUid::from(27);
-
             // Reverting the Root Claimable because it only should happen for root subnet
             Pallet::<T>::transfer_root_claimable_for_new_hotkey(&new_hotkey, &old_hotkey);
+            weight.saturating_accrue(T::DbWeight::get().reads_writes(2, 2));
 
             let old_alpha_values: Vec<((T::AccountId, NetUid), U64F64)> =
                 Alpha::<T>::iter_prefix((&new_hotkey,)).collect();
@@ -80,6 +80,8 @@ pub fn migrate_fix_root_claimed_overclaim<T: Config>() -> Weight {
                         &coldkey,
                         &coldkey,
                     );
+
+                    weight.saturating_accrue(T::DbWeight::get().reads_writes(2, 2));
                 }
             }
 
