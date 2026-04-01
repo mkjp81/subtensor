@@ -112,7 +112,7 @@ describeSuite({
 
         it({
             id: "T01",
-            title: "single-subnet swap moves RootClaimable only for that subnet, netuid2 remains on oldHotkey",
+            title: "single-subnet swap doesn't move root claimable if it is not root",
             test: async () => {
                 const { oldHotkey, oldHotkeyColdkey, newHotkey, netuid1, netuid2 } = await setupTwoSubnetsWithClaimable(
                     api,
@@ -155,11 +155,11 @@ describeSuite({
                     `RootClaimable[newHotkey] after swap: netuid1=${newAfter.get(netuid1) ?? 0n}, netuid2=${newAfter.get(netuid2) ?? 0n}`
                 );
 
-                // netuid1: moved to newHotkey
-                expect(newAfter.get(netuid1) ?? 0n, "newHotkey should have RootClaimable for netuid1").toBeGreaterThan(
-                    0n
-                );
-                expect(oldAfter.get(netuid1) ?? 0n, "oldHotkey should have no RootClaimable for netuid1").toBe(0n);
+                expect(newAfter.get(netuid1) ?? 0n, "newHotkey should not have RootClaimable for netuid1").toEqual(0n);
+                expect(
+                    oldAfter.get(netuid1) ?? 0n,
+                    "oldHotkey should retain RootClaimable for netuid1"
+                ).toBeGreaterThan(0n);
 
                 expect(
                     oldAfter.get(netuid2) ?? 0n,
@@ -167,8 +167,9 @@ describeSuite({
                 ).toBeGreaterThan(0n);
                 expect(newAfter.get(netuid2) ?? 0n, "newHotkey should have no RootClaimable for netuid2").toBe(0n);
 
-                log("✅ Single-subnet swap correctly transferred RootClaimable only for netuid1");
-                log("✅ oldHotkey retains RootClaimable for netuid2 — no overclaimed state");
+                log(
+                    "✅ Single-subnet swap doesn't transfer RootClaimable for the subnet if it was done for non-root subnet"
+                );
             },
         });
 
@@ -224,6 +225,60 @@ describeSuite({
                 expect(oldAfter.get(netuid2) ?? 0n, "oldHotkey should have no RootClaimable for netuid2").toBe(0n);
 
                 log("✅ Full swap correctly transferred RootClaimable for both subnets to newHotkey");
+            },
+        });
+
+        it({
+            id: "T03",
+            title: "single-subnet swap moves root claimable if it is root",
+            test: async () => {
+                const { oldHotkey, oldHotkeyColdkey, newHotkey, netuid1, netuid2 } = await setupTwoSubnetsWithClaimable(
+                    api,
+                    ROOT_NETUID,
+                    log
+                );
+
+                const claimableMapBefore = await getRootClaimable(api, oldHotkey.address);
+                log(
+                    `RootClaimable[oldHotkey] before swap: ${
+                        [...claimableMapBefore.entries()].map(([k, v]) => `netuid${k}=${v}`).join(", ") || "(none)"
+                    }`
+                );
+
+                expect(
+                    claimableMapBefore.get(netuid1) ?? 0n,
+                    "oldHotkey should have RootClaimable on netuid1 before swap"
+                ).toBeGreaterThan(0n);
+                expect(
+                    claimableMapBefore.get(netuid2) ?? 0n,
+                    "oldHotkey should have RootClaimable on netuid2 before swap"
+                ).toBeGreaterThan(0n);
+
+                log("Swapping oldHotkey → newHotkey for root subnet...");
+                await swapHotkey(api, oldHotkeyColdkey, oldHotkey.address, newHotkey.address, 0);
+                log("Swap done");
+
+                const oldAfter = await getRootClaimable(api, oldHotkey.address);
+                const newAfter = await getRootClaimable(api, newHotkey.address);
+
+                log(
+                    `RootClaimable[oldHotkey] after swap: netuid1=${oldAfter.get(netuid1) ?? 0n}, netuid2=${oldAfter.get(netuid2) ?? 0n}`
+                );
+                log(
+                    `RootClaimable[newHotkey] after swap: netuid1=${newAfter.get(netuid1) ?? 0n}, netuid2=${newAfter.get(netuid2) ?? 0n}`
+                );
+
+                expect(newAfter.get(netuid1) ?? 0n, "newHotkey should have RootClaimable for netuid1").toBeGreaterThan(
+                    0n
+                );
+                expect(newAfter.get(netuid2) ?? 0n, "newHotkey should have RootClaimable for netuid2").toBeGreaterThan(
+                    0n
+                );
+
+                expect(oldAfter.get(netuid1) ?? 0n, "oldHotkey should have no RootClaimable for netuid1").toBe(0n);
+                expect(oldAfter.get(netuid2) ?? 0n, "oldHotkey should have no RootClaimable for netuid2").toBe(0n);
+
+                log("✅ Single swap correctly transferred RootClaimable if it is done for root subnet");
             },
         });
     },
