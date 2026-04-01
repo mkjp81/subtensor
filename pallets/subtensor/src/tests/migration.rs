@@ -28,12 +28,12 @@ use pallet_scheduler::ScheduledOf;
 use scale_info::prelude::collections::VecDeque;
 use sp_core::{H256, U256, crypto::Ss58Codec};
 use sp_io::hashing::twox_128;
+use sp_runtime::AccountId32;
 use sp_runtime::{traits::Hash, traits::Zero};
 use sp_std::marker::PhantomData;
 use substrate_fixed::types::extra::U2;
 use substrate_fixed::types::{I96F32, U64F64};
 use subtensor_runtime_common::{NetUidStorageIndex, TaoBalance};
-use sp_runtime::AccountId32;
 
 #[allow(clippy::arithmetic_side_effects)]
 fn close(value: u64, target: u64, eps: u64) {
@@ -3142,9 +3142,8 @@ fn test_migrate_fix_root_claimed_overclaim() {
     let netuid_target = NetUid::from(27_u16);
     let netuid_other = NetUid::from(1_u16);
 
-    let mainnet_genesis = hex_literal::hex!(
-        "2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
-    );
+    let mainnet_genesis =
+        hex_literal::hex!("2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03");
     const MIGRATION_NAME: &[u8] = b"migrate_fix_root_claimed_overclaim";
 
     new_test_ext(1).execute_with(|| {
@@ -3247,9 +3246,7 @@ fn test_migrate_fix_root_claimed_overclaim() {
             RootClaimable::<Test>::get(new_hotkey).contains_key(&netuid_target),
             "second run must not modify new_hotkey data"
         );
-        assert!(
-            RootClaimable::<Test>::get(old_hotkey).is_empty(),
-        );
+        assert!(RootClaimable::<Test>::get(old_hotkey).is_empty(),);
     });
 }
 
@@ -3265,9 +3262,8 @@ fn test_migrate_fix_root_claimed_incorrect_genesis() {
     let netuid_target = NetUid::from(27_u16);
     let netuid_other = NetUid::from(1_u16);
 
-    let mainnet_genesis = hex_literal::hex!(
-        "2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
-    );
+    let mainnet_genesis =
+        hex_literal::hex!("2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03");
     const MIGRATION_NAME: &[u8] = b"migrate_fix_root_claimed_overclaim";
 
     // CASE 2: non-mainnet genesis — full no-op
@@ -3283,7 +3279,10 @@ fn test_migrate_fix_root_claimed_incorrect_genesis() {
         );
 
         let w = migrate_fix_root_claimed_overclaim::<Test>();
-        assert!(!w.is_zero(), "weight must be non-zero (writes migration flag)");
+        assert!(
+            !w.is_zero(),
+            "weight must be non-zero (writes migration flag)"
+        );
         assert!(HasMigrationRun::<Test>::get(MIGRATION_NAME.to_vec()));
 
         assert!(
@@ -3295,5 +3294,4 @@ fn test_migrate_fix_root_claimed_incorrect_genesis() {
             "new_hotkey data must remain untouched on non-mainnet"
         );
     });
-
 }
